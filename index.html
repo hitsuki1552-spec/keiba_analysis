@@ -185,7 +185,7 @@ $('#th').onclick=e=>{const s=e.target.closest('th')?.dataset.s;if(!s)return;SORT
 $('#gb').onchange=()=>{resetSort();run()};
 $('#side').addEventListener('input',run);$('#mn').oninput=run;
 $('#chips').onclick=e=>{const b=e.target.closest('button');if(!b)return;const s=F[b.dataset.g],k=+b.dataset.k;s.has(k)?s.delete(k):s.add(k);b.setAttribute('aria-pressed',s.has(k));run()};
-$('#reset').onclick=()=>{for(const k in F)F[k].clear();document.querySelectorAll('#chips button').forEach(b=>b.setAttribute('aria-pressed','false'));document.querySelectorAll('#side input').forEach(i=>i.value='');run()};
+$('#reset').onclick=()=>{for(const k in F)F[k].clear();document.querySelectorAll('#chips button').forEach(b=>b.setAttribute('aria-pressed','false'));document.querySelectorAll('#side input').forEach(i=>i.value='');$('#yr_a').value=2016;run()};
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x==b));$('#ta').hidden=b.dataset.t!='a';$('#th2').hidden=b.dataset.t!='h';$('#side').hidden=b.dataset.t!='a';$('#app').classList.toggle('one',b.dataset.t!='a')});
 const dstr=d=>new Date(Date.UTC(2015,0,1+d)).toISOString().slice(0,10);
 $('#hq').oninput=()=>{const q=$('#hq').value.trim(),m=[];if(q)for(let i=0;i<NAMES.length&&m.length<40;i++)if(NAMES[i].includes(q))m.push(i);$('#hl').innerHTML=m.map(i=>`<button data-i="${i}">${NAMES[i]}</button>`).join('')||(q?'<p class="note">該当する馬がいません。</p>':'')};
@@ -194,8 +194,8 @@ const c=k=>r.filter(i=>D.fin[i]<=k).length,w=r.filter(i=>D.fin[i]==1).length;
 $('#hn').textContent=NAMES[h];$('#hr').hidden=false;
 $('#hs').innerHTML=[['出走数',r.length],['1着',w],['2着以内',c(2)],['3着以内',c(3)],['勝率',pc(w/r.length)]].map(([a,b])=>`<div><small>${a}</small><b>${b}</b></div>`).join('');
 $('#hb').innerHTML=r.map(i=>`<tr><td>${dstr(D.d[i])}</td><td>${L.ven[D.ven[i]]}</td><td>${D.rn[i]}</td><td>${L.sf[D.sf[i]]}${D.dist[i]}</td><td>${L.gd[D.gd[i]]}</td><td>${L.cl[D.cl[i]]}</td><td>${M.jk[D.jk[i]]||''}</td><td>${D.pop[i]}</td><td>${(D.od[i]/10).toFixed(1)}</td><td>${D.fin[i]}</td><td>${D.l3[i]?(D.l3[i]/10).toFixed(1):'–'}</td></tr>`).join('')};
-$('#sub').textContent=`JRA ${N.toLocaleString()}出走（2015〜2025年）`;
-$('#load').hidden=true;$('#app').hidden=false;resetSort();run();
+$('#sub').textContent=`JRA ${N.toLocaleString()}出走（2015〜2025年のデータ。初期表示は2016年以降の過去10年）`;
+$('#yr_a').value=2016;$('#load').hidden=true;$('#app').hidden=false;resetSort();run();
 })();
 </script>
 </body>
