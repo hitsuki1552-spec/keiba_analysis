@@ -56,9 +56,16 @@ td.r{background:linear-gradient(var(--ref),var(--ref)) 50%/1px 100% no-repeat}
 .hl button:hover{background:var(--soft)}
 #hq{width:100%;max-width:420px}
 .neg{color:var(--loss)}
+.appbar{background:var(--panel);border-bottom:1px solid var(--line)}
+.appbar .in{max-width:1280px;margin:0 auto;padding:8px 20px;display:flex;align-items:center;gap:6px}
+.appbar b{margin-right:12px;font-size:15px}
+.appbar a{color:var(--mut);text-decoration:none;padding:4px 14px;border-radius:14px}
+.appbar a[aria-current=page]{background:var(--turf);color:#fff}
+.appbar a:focus-visible{outline:2px solid var(--turf);outline-offset:2px}
 </style>
 </head>
 <body>
+<div class="appbar"><div class="in"><b>競馬AI</b><a href="index.html" aria-current="page">データ分析</a><a href="log.html">予測ログ</a></div></div>
 <header><h1>競馬データ分析</h1><p id="sub">JRA 2015–2025 の全出走データ</p></header>
 <nav role="tablist"><button role="tab" aria-selected="true" data-t="a">条件別の成績</button><button role="tab" aria-selected="false" data-t="h">馬の成績</button></nav>
 <div id="load">データを読み込み中…</div>
