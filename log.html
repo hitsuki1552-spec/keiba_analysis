@@ -65,6 +65,8 @@ td:nth-child(1),td:nth-child(3),th:nth-child(1),th:nth-child(3){text-align:left}
 <div class="row" style="margin-top:8px"><button class="p" id="go">記録する</button><span class="mut" id="msg">同じ日・場所・レースは上書きされます（入力済みの結果は残ります）。</span></div></div>
 </section>
 <section id="list" hidden>
+<div class="card"><h2>結果CSVを取り込む（TARGETの result.csv）</h2>
+<div class="row"><label class="s" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:5px 12px">CSVを選ぶ（複数可）<input id="rc" type="file" accept=".csv,text/csv" multiple hidden></label><span class="mut" id="rmsg">着順と確定払戻を、記録済みの予測に自動で反映します。</span></div></div>
 <div class="card row"><label>日付 <select id="dt"></select></label><label>場所 <select id="vn"></select></label><button class="s" id="deld">この日の記録を削除</button></div>
 <div id="races"></div>
 </section>
@@ -72,7 +74,7 @@ td:nth-child(1),td:nth-child(3),th:nth-child(1),th:nth-child(3){text-align:left}
 <div class="card row"><label>対象の印 <select id="mk"><option>◎</option><option>○</option><option>▲</option><option>△</option><option>☆</option></select></label>
 <label>分け方 <select id="gp"><option value="none">なし（印ごと）</option><option value="course">芝・ダート・障害</option><option value="cls">クラス</option><option value="place">場所</option><option value="date">開催日</option></select></label></div>
 <div class="card"><div class="tw"><table class="rg"><thead id="sh"></thead><tbody id="sb"></tbody></table></div>
-<p class="mut">結果を入力したレースだけが対象です。単勝回収率は、記録時のオッズで100円ずつ賭けた場合の概算で、確定オッズとは異なります。レース数が少ないうちは偶然に大きく振れます。</p></div>
+<p class="mut">結果のあるレースだけが対象です。回収率は、取り込んだ確定払戻をもとに、対象の印の馬へ毎回100円ずつ賭けた場合の値です。手入力だけのレースは払戻がないため、回収率には含まれません（「回収率の対象」が計算に使った頭数）。レース数が少ないうちは偶然に大きく振れます。</p></div>
 </section>
 <section id="data" hidden>
 <div class="card"><h2>書き出し・読み込み</h2>
@@ -114,26 +116,51 @@ const rs=all.filter(r=>r.date==d&&(!$('#vn').value||r.place==$('#vn').value));
 $('#races').innerHTML=rs.length?rs.map(card).join(''):'<div class="card mut">記録がありません。「貼り付けて記録」から追加してください。</div>';
 $('#cnt').textContent=`保存済み: ${all.length}レース（結果入力済み ${all.filter(r=>r.result).length}）`;
 stats()}
-function card(r){const k=keyOf(r),res=r.result,pos=n=>res?[res[1],res[2],res[3]].indexOf(n)+1:0;
-const inp=i=>`<input type="number" min="1" max="18" data-k="${esc(k)}" data-i="${i}" value="${res?res[i]:''}" aria-label="${i}着の馬番">`;
+const posOf=(res,no)=>{for(let i=1;i<=6;i++)if(res[i]===no)return i;return 0};
+function card(r){const k=keyOf(r),res=r.result,py=res&&res.pay;
+const lab=h=>{if(!res)return'–';const p=posOf(res,h.no);return p?p+'着':(res[6]?'7着以下':'4着以下')};
+const yen=v=>v?v.toLocaleString()+'円':'–';
+const inp=i=>`<input type="number" min="1" max="18" data-k="${esc(k)}" data-i="${i}" value="${res&&res[i]?res[i]:''}"${py?' disabled':''} aria-label="${i}着の馬番">`;
 return `<div class="card rc"><div class="hd"><h3>${esc(r.place)} ${r.r}R ${esc(r.name)}</h3><span class="mut">${esc(r.field)}${r.dist}m ${esc(r.cls)}</span></div>
-<div class="tw"><table><thead><tr><th>印</th><th>馬番</th><th>馬名</th><th>勝率</th><th>final</th><th>オッズ</th><th>結果</th></tr></thead><tbody>${r.horses.map(h=>{const p=pos(h.no);return `<tr class="${p?'hit'+p:''}"><td>${h.mark}</td><td>${h.no}</td><td>${esc(h.name)}</td><td>${h.win.toFixed(1)}%</td><td>${h.final.toFixed(3)}</td><td>${h.odds==null?'–':h.odds.toFixed(1)}</td><td>${p?p+'着':'–'}</td></tr>`}).join('')}</tbody></table></div>
-<div class="row res" style="margin-top:8px"><span class="mut">結果（馬番）</span>1着 ${inp(1)} 2着 ${inp(2)} 3着 ${inp(3)}${res?'':'<span class="mut">3頭すべて入れると保存されます</span>'}</div></div>`}
+<div class="tw"><table><thead><tr><th>印</th><th>馬番</th><th>馬名</th><th>勝率</th><th>final</th><th>オッズ</th><th>結果</th><th>単勝払戻</th><th>複勝払戻</th></tr></thead><tbody>${r.horses.map(h=>{const p=res?posOf(res,h.no):0;return `<tr class="${p&&p<=3?'hit'+p:''}"><td>${h.mark}</td><td>${h.no}</td><td>${esc(h.name)}</td><td>${h.win.toFixed(1)}%</td><td>${h.final.toFixed(3)}</td><td>${h.odds==null?'–':h.odds.toFixed(1)}</td><td>${lab(h)}</td><td>${py?yen(py.w[h.no]):'–'}</td><td>${py?yen(py.p[h.no]):'–'}</td></tr>`}).join('')}</tbody></table></div>
+<div class="row res" style="margin-top:8px"><span class="mut">結果（馬番）</span>1着 ${inp(1)} 2着 ${inp(2)} 3着 ${inp(3)}${py?`<span class="mut">CSVから取り込み済み</span><button class="s" data-clr="${esc(k)}">結果を消す</button>`:(res?'':'<span class="mut">手入力は3頭すべて入れると保存されます（払戻は入りません）</span>')}</div></div>`}
+$('#races').addEventListener('click',e=>{const k=e.target.dataset.clr;if(k){DB[k].result=null;save();refresh()}});
 $('#races').addEventListener('change',e=>{const t=e.target;if(!t.dataset.k)return;const r=DB[t.dataset.k],v=[1,2,3].map(i=>document.querySelector(`input[data-k="${CSS.escape(t.dataset.k)}"][data-i="${i}"]`).value);
 if(v.every(x=>x!=='')){const n=v.map(Number);if(new Set(n).size<3){toast('同じ馬番が重複しています');return}r.result={1:n[0],2:n[1],3:n[2]}}else if(v.every(x=>x==='')){r.result=null}else return;
 save();refresh()});
 $('#dt').onchange=$('#vn').onchange=refresh;
 $('#deld').onclick=()=>{const d=$('#dt').value;if(!d||!confirm(d+' の記録をすべて削除しますか？'))return;for(const k in DB)if(DB[k].date==d)delete DB[k];save();refresh()};
-function st(l){let n=l.length,w=0,p2=0,p3=0,ret=0,on=0,os=0;for(const[r,h]of l){const f=[r.result[1],r.result[2],r.result[3]].indexOf(h.no)+1;if(f==1)w++;if(f&&f<=2)p2++;if(f)p3++;if(h.odds!=null){on++;os+=h.odds;if(f==1)ret+=h.odds*100}}return{n,w:w/n,p2:p2/n,p3:p3/n,roi:on?ret/on:NaN,ao:on?os/on:NaN}}
+function st(l){let n=l.length,w=0,p2=0,p3=0,wr=0,pr=0,pn=0,on=0,os=0;
+for(const[r,h]of l){const f=posOf(r.result,h.no),py=r.result.pay;if(f==1)w++;if(f&&f<=2)p2++;
+if(py?py.p[h.no]>0:(f&&f<=3))p3++;if(h.odds!=null){on++;os+=h.odds}
+if(py){pn++;wr+=py.w[h.no]||0;pr+=py.p[h.no]||0}}
+return{n,w:w/n,p2:p2/n,p3:p3/n,rw:pn?wr/pn:NaN,rp:pn?pr/pn:NaN,pn,ao:on?os/on:NaN}}
 function stats(){const mk=$('#mk').value,gp=$('#gp').value,L=[];
 for(const r of Object.values(DB))if(r.result)for(const h of r.horses)L.push([r,h]);
 const gk={course:r=>course(r),cls:r=>r.cls,place:r=>r.place,date:r=>r.date};
 let groups=[];
-if(gp=='none')groups=['◎','○','▲','△','☆'].map(m=>[m,L.filter(x=>x[1].mark==m)]);
+if(gp=='none')groups=[...['◎','○','▲','△','☆'].map(m=>[m,L.filter(x=>x[1].mark==m)]),['全印',L]];
 else{const M={};for(const x of L)if(x[1].mark==mk)(M[gk[gp](x[0])]??=[]).push(x);groups=Object.entries(M).sort((a,b)=>a[0]<b[0]?-1:1)}
-$('#sh').innerHTML=`<tr><th>${gp=='none'?'印':'区分（'+mk+'）'}</th><th>レース数</th><th></th><th>1着率</th><th>2着内率</th><th>3着内率</th><th>単勝回収率</th><th>平均オッズ</th></tr>`;
-$('#sb').innerHTML=groups.filter(g=>g[1].length).map(([k,l])=>{const s=st(l),p=v=>(v*100).toFixed(1)+'%';return `<tr><td>${esc(k)}</td><td>${s.n}</td><td></td><td>${p(s.w)}</td><td>${p(s.p2)}</td><td>${p(s.p3)}</td><td class="${s.roi>=100?'roi':''}">${isNaN(s.roi)?'–':s.roi.toFixed(1)+'%'}</td><td>${isNaN(s.ao)?'–':s.ao.toFixed(1)}</td></tr>`}).join('')||'<tr><td colspan="8" class="mut" style="text-align:left">結果を入力したレースがまだありません。「記録一覧・結果入力」で1着〜3着の馬番を入れてください。</td></tr>'}
+$('#sh').innerHTML=`<tr><th>${gp=='none'?'印':'区分（'+mk+'）'}</th><th>レース数</th><th>1着率</th><th>2着内率</th><th>3着内率</th><th>単勝回収率</th><th>複勝回収率</th><th>回収率の対象</th><th>平均オッズ</th></tr>`;
+const p=v=>(v*100).toFixed(1)+'%',ro=v=>isNaN(v)?'<td>–</td>':`<td class="${v>=100?'roi':''}">${v.toFixed(1)}%</td>`;
+$('#sb').innerHTML=groups.filter(g=>g[1].length).map(([k,l])=>{const s=st(l);return `<tr><td>${esc(k)}</td><td>${s.n}</td><td>${p(s.w)}</td><td>${p(s.p2)}</td><td>${p(s.p3)}</td>${ro(s.rw)}${ro(s.rp)}<td>${s.pn}</td><td>${isNaN(s.ao)?'–':s.ao.toFixed(1)}</td></tr>`}).join('')||'<tr><td colspan="9" class="mut" style="text-align:left">結果のあるレースがまだありません。「記録一覧・結果入力」で結果CSVを取り込んでください。</td></tr>'}
 $('#mk').onchange=$('#gp').onchange=stats;
+const PL={'01':'札幌','02':'函館','03':'福島','04':'新潟','05':'東京','06':'中山','07':'中京','08':'京都','09':'阪神','10':'小倉'};
+function csv(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==',')(row.push(f),f='');else if(c=='\n')(row.push(f),rows.push(row),row=[],f='');else if(c!='\r')f+=c}if(f!==''||row.length){row.push(f);rows.push(row)}return rows}
+$('#rc').onchange=async e=>{let ok=0,miss=0,bad=0,races=0;
+for(const f of e.target.files){let t=new TextDecoder('shift_jis').decode(await f.arrayBuffer());if(!t.includes('レースID'))t=new TextDecoder('utf-8').decode(await f.arrayBuffer());
+const rows=csv(t),H=rows[0],ix=n=>H.indexOf(n);
+for(const r of rows.slice(1)){const id=(r[ix('レースID')]||'').trim();if(!/^\d{16}$/.test(id))continue;races++;
+const date=`${id.slice(0,4)}-${id.slice(4,6)}-${id.slice(6,8)}`,pl=PL[id.slice(8,10)],R=+id.slice(14,16),p=DB[`${date}|${pl}|${R}`];
+if(!p){miss++;continue}
+const g=n=>+r[ix(n)]||0,cs=g('平・障')==1?'障害':(g('芝・ダ')==0?'芝':'ダート');
+if(g('距離')!==p.dist||cs!==course(p)){bad++;continue}
+const res={};for(let i=1;i<=6;i++)res[i]=g(i+'着馬番');
+const w={},pc={};if(g('単配当'))w[res[1]]=g('単配当');if(g('単配当(同着)')&&g('1・2着の同差フラグ'))w[res[2]]=g('単配当(同着)');
+['複配当1','複配当2','複配当3','複配当4(同着)'].forEach((n,i)=>{if(g(n)&&res[i+1])pc[res[i+1]]=g(n)});
+res.pay={w,p:pc};p.result=res;ok++}}
+save();e.target.value='';refresh();
+$('#rmsg').textContent=`${races}レース中、${ok}レースの結果を反映しました。`+(miss?` 予測の記録がない: ${miss}レース。`:'')+(bad?` 距離・コースが一致せず除外: ${bad}レース。`:'')};
 $('#ex').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB)],{type:'application/json'}));a.download=`yosou_log_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 $('#im').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());let n=0;for(const k in o)if(o[k]&&Array.isArray(o[k].horses)){DB[k]=o[k];n++}save();toast(`${n}レースを読み込みました`);refresh()}catch(x){toast('読み込めませんでした。書き出したJSONを選んでください')}e.target.value=''};
 $('#clr').onclick=()=>{if(confirm('保存済みの記録をすべて削除します。先にJSONを書き出しましたか？')){DB={};save();refresh()}};
