@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AI予測ログ</title>
+<style>
+:root{--bg:#eef1f3;--panel:#fff;--ink:#18222b;--mut:#5d6b78;--line:#d5dce2;--turf:#2c7a4b;--soft:#dcebe1;--loss:#a8453a;--bar:#b5c4cf}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12181d;--panel:#1a2229;--ink:#e6ebef;--mut:#93a1ad;--line:#2c3842;--turf:#5fbf86;--soft:#21382b;--loss:#d9796d;--bar:#44596a}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 "Hiragino Sans","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+header,nav,main{max-width:1000px;margin:0 auto;padding-left:16px;padding-right:16px}
+header{padding-top:18px}
+h1{font-size:21px;margin:0}
+header p{margin:2px 0 8px;color:var(--mut)}
+nav{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font:inherit;color:var(--mut);cursor:pointer;white-space:nowrap}
+nav button[aria-selected=true]{color:var(--ink);border-color:var(--turf);font-weight:700}
+main{padding-top:16px;padding-bottom:48px}
+[hidden]{display:none!important}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.card h2{font-size:15px;margin:0 0 8px}
+textarea{width:100%;height:220px;font:12px/1.5 ui-monospace,Consolas,monospace;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 8px;min-width:0}
+button.p{font:inherit;background:var(--turf);color:#fff;border:0;border-radius:6px;padding:7px 16px;cursor:pointer}
+button.s{font:inherit;background:none;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:5px 12px;cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--turf);outline-offset:1px}
+.row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.mut{color:var(--mut);font-size:12px}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;white-space:nowrap}
+th,td{padding:4px 10px;text-align:right;border-bottom:1px solid var(--line)}
+th{color:var(--mut);font-weight:500;font-size:12px}
+td:nth-child(1),td:nth-child(3),th:nth-child(1),th:nth-child(3){text-align:left}
+.rg td:nth-child(3),.rg th:nth-child(3){text-align:right}
+.rc h3{font-size:14px;margin:0}
+.rc .hd{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;margin-bottom:6px}
+.res input{width:58px}
+.hit1{background:var(--soft);font-weight:700}
+.hit2,.hit3{background:var(--soft)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:6px;max-width:90%}
+.roi{color:var(--turf);font-weight:700}
+.neg{color:var(--loss)}
+.appbar{background:var(--panel);border-bottom:1px solid var(--line)}
+.appbar .in{max-width:1280px;margin:0 auto;padding:8px 20px;display:flex;align-items:center;gap:6px}
+.appbar b{margin-right:12px;font-size:15px}
+.appbar a{color:var(--mut);text-decoration:none;padding:4px 14px;border-radius:14px}
+.appbar a[aria-current=page]{background:var(--turf);color:#fff}
+.appbar a:focus-visible{outline:2px solid var(--turf);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="appbar"><div class="in"><b>競馬AI</b><a href="index.html">データ分析</a><a href="log.html" aria-current="page">予測ログ</a></div></div>
+<header><h1>AI予測ログ</h1><p>予測の出力を貼り付けて記録し、結果を入れると印ごとの成績が集計されます。</p></header>
+<nav role="tablist">
+<button role="tab" aria-selected="true" data-t="add">貼り付けて記録</button>
+<button role="tab" aria-selected="false" data-t="list">記録一覧・結果入力</button>
+<button role="tab" aria-selected="false" data-t="stat">成績集計</button>
+<button role="tab" aria-selected="false" data-t="data">バックアップ</button>
+</nav>
+<main>
+<section id="add">
+<div class="card"><h2>予測の出力を貼り付け</h2>
+<textarea id="ta" placeholder="🏁🏁🏁 全レースAI予測サマリー… から最後の ==== までを、そのまま貼り付けてください"></textarea>
+<div class="row" style="margin-top:8px"><button class="p" id="go">記録する</button><span class="mut" id="msg">同じ日・場所・レースは上書きされます（入力済みの結果は残ります）。</span></div></div>
+</section>
+<section id="list" hidden>
+<div class="card row"><label>日付 <select id="dt"></select></label><label>場所 <select id="vn"></select></label><button class="s" id="deld">この日の記録を削除</button></div>
+<div id="races"></div>
+</section>
+<section id="stat" hidden>
+<div class="card row"><label>対象の印 <select id="mk"><option>◎</option><option>○</option><option>▲</option><option>△</option><option>☆</option></select></label>
+<label>分け方 <select id="gp"><option value="none">なし（印ごと）</option><option value="course">芝・ダート・障害</option><option value="cls">クラス</option><option value="place">場所</option><option value="date">開催日</option></select></label></div>
+<div class="card"><div class="tw"><table class="rg"><thead id="sh"></thead><tbody id="sb"></tbody></table></div>
+<p class="mut">結果を入力したレースだけが対象です。単勝回収率は、記録時のオッズで100円ずつ賭けた場合の概算で、確定オッズとは異なります。レース数が少ないうちは偶然に大きく振れます。</p></div>
+</section>
+<section id="data" hidden>
+<div class="card"><h2>書き出し・読み込み</h2>
+<p class="mut">記録はこのブラウザの中に保存されます。端末の変更やブラウザのデータ削除に備えて、定期的にJSONを書き出してください。</p>
+<div class="row"><button class="p" id="ex">JSONを書き出す</button><label class="s" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:5px 12px">JSONを読み込む<input id="im" type="file" accept=".json,application/json" hidden></label><button class="s" id="clr">すべて削除</button></div>
+<p class="mut" id="cnt"></p></div>
+</section>
+</main>
+<div id="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s),KEY='keiba_pred_v1';
+let mem={};
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return mem}};
+let DB=load();
+const toast=t=>{const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3500)};
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){mem=DB;toast('ブラウザに保存できませんでした。JSONを書き出して保管してください')}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const keyOf=r=>`${r.date}|${r.place}|${r.r}`;
+const course=r=>r.field.startsWith('障害')?'障害':r.field;
+function parse(t){const out=[];let cur=null;
+for(const raw of t.split(/\r?\n/)){const l=raw.trim();if(!l)continue;
+if(l.includes('📅')){const d=l.match(/(\d{4}-\d{2}-\d{2})/),p=l.match(/🏟\uFE0F?\s*(\S+)\s+(\d+)R/),f=l.match(/🛣\uFE0F?\s*(\S+)\s+(\d+)m/),n=l.match(/🎯\uFE0F?\s*(.+?)\s*\(([^()]*)\)\s*$/);
+if(d&&p&&f){cur={date:d[1],place:p[1],r:+p[2],field:f[1],dist:+f[2],name:n?n[1]:'',cls:n?n[2]:'',horses:[],result:null};out.push(cur)}else cur=null;continue}
+const h=l.match(/^([◎○▲△☆])\s*(\d+)\s+(.+?)\s+(\d+(?:\.\d+)?)%\s+(\d+)位\s+(-?\d+(?:\.\d+)?)\s+(\S+?)倍/);
+if(cur&&h){const o=parseFloat(h[7]);cur.horses.push({mark:h[1],no:+h[2],name:h[3],win:+h[4],rank:+h[5],final:+h[6],odds:isNaN(o)?null:o})}}
+return out.filter(r=>r.horses.length)}
+$('#go').onclick=()=>{const rs=parse($('#ta').value);if(!rs.length){$('#msg').textContent='レースを読み取れませんでした。出力の見出し行（📅 …）から貼り付けてください。';return}
+let a=0,u=0;for(const r of rs){const k=keyOf(r);if(DB[k]){r.result=DB[k].result;u++}else a++;DB[k]=r}
+save();$('#ta').value='';$('#msg').textContent=`${rs.length}レースを記録しました（新規${a}、上書き${u}）。`;refresh()};
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',x==b));for(const s of['add','list','stat','data'])$('#'+s).hidden=s!=b.dataset.t;refresh()});
+const sorted=()=>Object.values(DB).sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.place<b.place?-1:a.place>b.place?1:a.r-b.r);
+function refresh(){
+const all=sorted(),dates=[...new Set(all.map(r=>r.date))].reverse();
+const dv=$('#dt').value,vv=$('#vn').value;
+$('#dt').innerHTML=dates.map(d=>`<option>${d}</option>`).join('');if(dates.includes(dv))$('#dt').value=dv;
+const d=$('#dt').value,vs=[...new Set(all.filter(r=>r.date==d).map(r=>r.place))];
+$('#vn').innerHTML='<option value="">すべて</option>'+vs.map(v=>`<option>${v}</option>`).join('');if(vs.includes(vv))$('#vn').value=vv;
+const rs=all.filter(r=>r.date==d&&(!$('#vn').value||r.place==$('#vn').value));
+$('#races').innerHTML=rs.length?rs.map(card).join(''):'<div class="card mut">記録がありません。「貼り付けて記録」から追加してください。</div>';
+$('#cnt').textContent=`保存済み: ${all.length}レース（結果入力済み ${all.filter(r=>r.result).length}）`;
+stats()}
+function card(r){const k=keyOf(r),res=r.result,pos=n=>res?[res[1],res[2],res[3]].indexOf(n)+1:0;
+const inp=i=>`<input type="number" min="1" max="18" data-k="${esc(k)}" data-i="${i}" value="${res?res[i]:''}" aria-label="${i}着の馬番">`;
+return `<div class="card rc"><div class="hd"><h3>${esc(r.place)} ${r.r}R ${esc(r.name)}</h3><span class="mut">${esc(r.field)}${r.dist}m ${esc(r.cls)}</span></div>
+<div class="tw"><table><thead><tr><th>印</th><th>馬番</th><th>馬名</th><th>勝率</th><th>final</th><th>オッズ</th><th>結果</th></tr></thead><tbody>${r.horses.map(h=>{const p=pos(h.no);return `<tr class="${p?'hit'+p:''}"><td>${h.mark}</td><td>${h.no}</td><td>${esc(h.name)}</td><td>${h.win.toFixed(1)}%</td><td>${h.final.toFixed(3)}</td><td>${h.odds==null?'–':h.odds.toFixed(1)}</td><td>${p?p+'着':'–'}</td></tr>`}).join('')}</tbody></table></div>
+<div class="row res" style="margin-top:8px"><span class="mut">結果（馬番）</span>1着 ${inp(1)} 2着 ${inp(2)} 3着 ${inp(3)}${res?'':'<span class="mut">3頭すべて入れると保存されます</span>'}</div></div>`}
+$('#races').addEventListener('change',e=>{const t=e.target;if(!t.dataset.k)return;const r=DB[t.dataset.k],v=[1,2,3].map(i=>document.querySelector(`input[data-k="${CSS.escape(t.dataset.k)}"][data-i="${i}"]`).value);
+if(v.every(x=>x!=='')){const n=v.map(Number);if(new Set(n).size<3){toast('同じ馬番が重複しています');return}r.result={1:n[0],2:n[1],3:n[2]}}else if(v.every(x=>x==='')){r.result=null}else return;
+save();refresh()});
+$('#dt').onchange=$('#vn').onchange=refresh;
+$('#deld').onclick=()=>{const d=$('#dt').value;if(!d||!confirm(d+' の記録をすべて削除しますか？'))return;for(const k in DB)if(DB[k].date==d)delete DB[k];save();refresh()};
+function st(l){let n=l.length,w=0,p2=0,p3=0,ret=0,on=0,os=0;for(const[r,h]of l){const f=[r.result[1],r.result[2],r.result[3]].indexOf(h.no)+1;if(f==1)w++;if(f&&f<=2)p2++;if(f)p3++;if(h.odds!=null){on++;os+=h.odds;if(f==1)ret+=h.odds*100}}return{n,w:w/n,p2:p2/n,p3:p3/n,roi:on?ret/on:NaN,ao:on?os/on:NaN}}
+function stats(){const mk=$('#mk').value,gp=$('#gp').value,L=[];
+for(const r of Object.values(DB))if(r.result)for(const h of r.horses)L.push([r,h]);
+const gk={course:r=>course(r),cls:r=>r.cls,place:r=>r.place,date:r=>r.date};
+let groups=[];
+if(gp=='none')groups=['◎','○','▲','△','☆'].map(m=>[m,L.filter(x=>x[1].mark==m)]);
+else{const M={};for(const x of L)if(x[1].mark==mk)(M[gk[gp](x[0])]??=[]).push(x);groups=Object.entries(M).sort((a,b)=>a[0]<b[0]?-1:1)}
+$('#sh').innerHTML=`<tr><th>${gp=='none'?'印':'区分（'+mk+'）'}</th><th>レース数</th><th></th><th>1着率</th><th>2着内率</th><th>3着内率</th><th>単勝回収率</th><th>平均オッズ</th></tr>`;
+$('#sb').innerHTML=groups.filter(g=>g[1].length).map(([k,l])=>{const s=st(l),p=v=>(v*100).toFixed(1)+'%';return `<tr><td>${esc(k)}</td><td>${s.n}</td><td></td><td>${p(s.w)}</td><td>${p(s.p2)}</td><td>${p(s.p3)}</td><td class="${s.roi>=100?'roi':''}">${isNaN(s.roi)?'–':s.roi.toFixed(1)+'%'}</td><td>${isNaN(s.ao)?'–':s.ao.toFixed(1)}</td></tr>`}).join('')||'<tr><td colspan="8" class="mut" style="text-align:left">結果を入力したレースがまだありません。「記録一覧・結果入力」で1着〜3着の馬番を入れてください。</td></tr>'}
+$('#mk').onchange=$('#gp').onchange=stats;
+$('#ex').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(DB)],{type:'application/json'}));a.download=`yosou_log_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+$('#im').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());let n=0;for(const k in o)if(o[k]&&Array.isArray(o[k].horses)){DB[k]=o[k];n++}save();toast(`${n}レースを読み込みました`);refresh()}catch(x){toast('読み込めませんでした。書き出したJSONを選んでください')}e.target.value=''};
+$('#clr').onclick=()=>{if(confirm('保存済みの記録をすべて削除します。先にJSONを書き出しましたか？')){DB={};save();refresh()}};
+refresh();
+</script>
+</body>
+</html>
