@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>競馬新聞</title>
+<style id="pg">@page{size:A4 portrait;margin:8mm}</style>
+<style>
+:root{--bg:#eef1f3;--panel:#fff;--ink:#18222b;--mut:#5d6b78;--line:#d5dce2;--turf:#2c7a4b;--soft:#dcebe1;--loss:#a8453a}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12181d;--panel:#1a2229;--ink:#e6ebef;--mut:#93a1ad;--line:#2c3842;--turf:#5fbf86;--soft:#21382b;--loss:#d9796d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 "Hiragino Sans","Noto Sans JP","Yu Gothic",Meiryo,sans-serif;padding:env(safe-area-inset-top,0) 0 env(safe-area-inset-bottom,0)}
+.appbar{background:var(--panel);border-bottom:1px solid var(--line)}
+.appbar .in{max-width:1280px;margin:0 auto;padding:8px 20px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.appbar b{margin-right:12px;font-size:15px}
+.appbar a{color:var(--mut);text-decoration:none;padding:4px 14px;border-radius:14px}
+.appbar a[aria-current=page]{background:var(--turf);color:#fff}
+main{max-width:1280px;margin:0 auto;padding:16px 20px 48px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px;margin-bottom:14px}
+.row{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.row+.row{margin-top:10px}
+label{color:var(--mut);font-size:12px;display:flex;gap:6px;align-items:center}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;min-width:0}
+button{font:inherit;cursor:pointer}
+.p{background:var(--turf);color:#fff;border:0;border-radius:6px;padding:7px 16px}
+.s{background:none;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 12px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chips button{font-size:12px;padding:2px 9px;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink)}
+.chips button[aria-pressed=true]{background:var(--turf);border-color:var(--turf);color:#fff}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--turf);outline-offset:1px}
+.mut{color:var(--mut);font-size:12px}
+.sheet{column-count:var(--cols,1);column-gap:6mm;margin-bottom:20px}
+.sh{column-span:all;display:flex;justify-content:space-between;align-items:baseline;border-bottom:3px double var(--ink);margin-bottom:8px;padding-bottom:2px}
+.sh h2{margin:0;font-size:20px}
+.race{break-inside:avoid;border:1px solid var(--ink);margin:0 0 12px;background:var(--panel)}
+.race h3{margin:0;background:var(--turf);color:#fff;padding:2px 8px;font-size:14px;display:flex;flex-wrap:wrap;gap:0 12px;align-items:baseline}
+.race h3 small{font-weight:400;font-size:12px}
+table{border-collapse:collapse;width:100%;white-space:nowrap}
+th,td{padding:2px 5px;border-bottom:1px solid var(--line);text-align:left}
+th{font-size:11px;color:var(--mut);font-weight:500}
+td.n,th.n{text-align:center}
+td.nm{font-weight:700}
+td.ped{white-space:nowrap}
+.c2 td.ped,.c3 td.ped{white-space:normal}
+td.wk{text-align:center;font-weight:700;width:22px;border-right:1px solid var(--line)}
+td .sm{font-size:11px;color:var(--mut)}
+td.mk{text-align:center;width:44px}
+td.am{font-size:15px;color:var(--mut);border-right:1px dotted var(--line)}
+select.mk{padding:0 2px;font-size:15px}
+.pm{display:none;font-size:15px;font-weight:700}
+.w1{background:#fff;color:#000}.w2{background:#222;color:#fff}.w3{background:#d33;color:#fff}.w4{background:#2a62d6;color:#fff}.w5{background:#f2d12e;color:#000}.w6{background:#2fa14a;color:#fff}.w7{background:#f08a24;color:#000}.w8{background:#f6a0c0;color:#000}
+.cm{min-height:20px;padding:3px 8px;font-size:12px;outline:0;white-space:pre-wrap}
+.cm:empty:before{content:"予想コメント（クリックして入力）";color:var(--mut)}
+.leg{font-size:11px;color:var(--mut);margin-top:4px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:6px;max-width:90%}
+[hidden]{display:none!important}
+@media screen and (max-width:760px){.sheet{column-count:1!important}.race{overflow-x:auto}}
+@media print{
+:root,:root:not([data-theme="light"]),:root[data-theme="dark"]{--bg:#fff;--panel:#fff;--ink:#000;--mut:#333;--line:#999;--turf:#1d5c38;--soft:#ddd}
+.noprint,.appbar,#toast{display:none!important}
+*{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+body{background:#fff;font-size:9pt;line-height:1.35;padding:0}
+main{max-width:none;padding:0}
+select.mk{display:none}.pm{display:inline}
+.sheet{margin:0}.sheet+.sheet{break-before:page}
+.cm:empty{display:none}.cm:empty:before{content:none}
+.sh h2{font-size:15pt}
+th,td{padding:1px 4px}.race h3{font-size:10.5pt}
+}
+</style>
+</head>
+<body>
+<div class="appbar noprint"><div class="in"><b>競馬AI</b><a href="index.html">データ分析</a><a href="log.html">予測ログ</a><a href="paper.html" aria-current="page">競馬新聞</a></div></div>
+<main>
+<div class="card noprint">
+<div class="row"><label class="s" style="cursor:pointer;color:var(--ink)">出馬表CSVを選ぶ<input id="fc" type="file" accept=".csv,text/csv" hidden></label>
+<span class="mut" id="info">TARGETの出馬表CSVを読み込むと、新聞が作られます。</span></div>
+<div class="row"><label>新聞名 <input id="ttl" size="16"></label><label>場所 <select id="pl"></select></label>
+<label>用紙 <select id="pp"><option value="A4 portrait">A4 縦</option><option value="A4 landscape">A4 横</option><option value="A3 portrait">A3 縦</option><option value="A3 landscape">A3 横</option></select></label>
+<label>列数 <select id="cn"><option>1</option><option>2</option><option>3</option></select></label></div>
+<div class="row"><span class="mut">表示項目</span><div class="chips" id="cols"></div></div>
+<div class="row"><button class="s" id="ai">AI印を最終印にコピー</button><button class="s" id="clr">印をすべて消す</button><button class="p" id="pr">PDFとして保存（印刷）</button><span class="mut" id="aim"></span></div>
+</div>
+<div id="paper"></div>
+</main>
+<div id="toast" hidden></div>
+<script>
+const $=s=>document.querySelector(s),SK='keiba_paper_v1',PK='keiba_pred_v1';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const toast=t=>{const e=$('#toast');e.textContent=t;e.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>e.hidden=true,3500)};
+let P={title:'AI競馬新聞',card:null,marks:{},cmt:{},paper:'A4 portrait',cols:1,place:'',on:['wk','sx','jk','wt','tr','ped','odds','ai']};
+try{const s=JSON.parse(localStorage.getItem(SK)||'null');if(s)P={...P,...s}}catch(e){}
+const save=()=>{try{localStorage.setItem(SK,JSON.stringify(P))}catch(e){toast('ブラウザに保存できませんでした')}};
+const MK=['','◎','○','▲','△','☆','✓','消'];
+let AI={};
+function loadAI(){AI={};let n=0;try{const D=JSON.parse(localStorage.getItem(PK)||'{}');
+for(const k in D){const r=D[k];if(!r||!r.horses)continue;n++;for(const h of r.horses)AI[`${r.date}|${r.place}|${r.r}|${h.no}`]=h}}catch(e){}return n}
+const CD=[['wk','枠',r=>`<td class="wk w${r.wk}">${r.wk}</td>`,1],
+['no','番',r=>`<td class="n">${r.no}</td>`,0],
+['nm','馬名',r=>`<td class="nm">${esc(r.nm)}</td>`,0],
+['sx','性齢',r=>`<td>${esc(r.sx+r.ag)}</td>`,1],
+['cl','毛色',r=>`<td>${esc(r.cl)}</td>`,1],
+['jk','騎手',r=>`<td>${esc(r.jk)}</td>`,1],
+['wt','斤量',r=>`<td class="n">${esc(r.wt)}</td>`,1],
+['tr','調教師',r=>`<td>${esc(r.tr)}<span class="sm">（${esc(r.ar)}）</span></td>`,1],
+['ow','馬主',r=>`<td>${esc(r.ow)}</td>`,1],
+['ped','血統',r=>`<td class="ped">${esc(r.sr)}<span class="sm"> ／ ${esc(r.dm)}（${esc(r.bs)}）</span></td>`,1],
+['pr','本賞金',r=>`<td class="n">${esc(r.pr)}</td>`,1],
+['odds','人気・単勝',r=>`<td class="n">${r.pop&&r.od?`${r.pop}人気 ${r.od.toFixed(1)}`:'–'}</td>`,1],
+['ai','AI',(r,k)=>{const a=AI[k];return `<td class="n">${a?`${a.rank}位 ${a.win.toFixed(1)}%`:'–'}</td>`},1]];
+const LBL={wk:'枠',sx:'性齢',cl:'毛色',jk:'騎手',wt:'斤量',tr:'調教師',ow:'馬主',ped:'血統（父・母・母父）',pr:'本賞金',odds:'人気・単勝',ai:'AI勝率'};
+$('#cols').innerHTML=CD.filter(c=>c[3]).map(c=>`<button data-c="${c[0]}" aria-pressed="${P.on.includes(c[0])}">${LBL[c[0]]}</button>`).join('');
+$('#cols').onclick=e=>{const b=e.target.closest('button');if(!b)return;const c=b.dataset.c;P.on=P.on.includes(c)?P.on.filter(x=>x!=c):[...P.on,c];b.setAttribute('aria-pressed',P.on.includes(c));save();render()};
+const isoD=d=>`20${d.slice(0,2)}-${d.slice(2,4)}-${d.slice(4,6)}`;
+function csv(t){const rows=[];let row=[],f='',q=false;for(let i=0;i<t.length;i++){const c=t[i];if(q){if(c=='"'){if(t[i+1]=='"'){f+='"';i++}else q=false}else f+=c}else if(c=='"')q=true;else if(c==',')(row.push(f),f='');else if(c=='\n')(row.push(f),rows.push(row),row=[],f='');else if(c!='\r')f+=c}if(f!==''||row.length){row.push(f);rows.push(row)}return rows}
+$('#fc').onchange=async e=>{const f=e.target.files[0];if(!f)return;const buf=await f.arrayBuffer();let t=new TextDecoder('shift_jis').decode(buf);if(!t.includes('馬名'))t=new TextDecoder('utf-8').decode(buf);
+const rows=csv(t),H=rows[0].map(s=>s.trim()),ix=n=>H.indexOf(n),rs=[];
+if(ix('馬名')<0||ix('競走番号')<0){toast('出馬表CSVではないようです（馬名・競走番号の列が見つかりません）');return}
+for(const r of rows.slice(1)){const g=n=>(r[ix(n)]??'').trim();if(!+g('馬番号'))continue;
+rs.push({d:isoD(g('年月日')),pl:g('場所'),r:+g('競走番号'),no:+g('馬番号'),wk:+g('枠番号'),rn:g('レース名'),sf:g('芝・ダ'),di:+g('距離'),nm:g('馬名'),sx:g('性別'),ag:g('年齢'),jk:g('騎手名'),wt:g('斤量'),tr:g('調教師名'),ar:g('所属'),ow:g('馬主名'),sr:g('種牡馬名'),dm:g('母名'),bs:g('母父名'),cl:g('毛色'),hc:+g('頭数'),pr:g('本賞金'),pop:+g('本日人気'),od:parseFloat(g('本日オッズ'))||0})}
+if(!rs.length){toast('出走馬を読み取れませんでした');return}
+P.card=rs;P.place='';save();e.target.value='';init();toast(`${rs.length}頭を読み込みました`)};
+$('#ttl').oninput=()=>{P.title=$('#ttl').value;save();render()};
+$('#pl').onchange=()=>{P.place=$('#pl').value;save();render()};
+$('#pp').onchange=()=>{P.paper=$('#pp').value;save();page()};
+$('#cn').onchange=()=>{P.cols=+$('#cn').value;save();page()};
+const page=()=>{$('#pg').textContent=`@page{size:${P.paper};margin:8mm}`;document.documentElement.style.setProperty('--cols',P.cols);$('#paper').style.setProperty('--cols',P.cols)};
+function render(){const rs=P.card;if(!rs){$('#paper').innerHTML='<div class="card mut">出馬表CSVを読み込んでください。</div>';return}
+const hasAI=rs.some(r=>AI[`${r.d}|${r.pl}|${r.r}|${r.no}`]);
+const hasOd=rs.some(r=>r.pop&&r.od),cols=CD.filter(c=>!c[3]||(P.on.includes(c[0])&&(c[0]!='ai'||hasAI)&&(c[0]!='odds'||hasOd)));
+const places=[...new Set(rs.map(r=>r.pl))],date=rs[0].d,dt=new Date(date+'T00:00:00');
+const ds=`${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日（${'日月火水木金土'[dt.getDay()]}）`;
+$('#paper').innerHTML=places.filter(p=>!P.place||p==P.place).map(pl=>{
+const rr=[...new Set(rs.filter(r=>r.pl==pl).map(r=>r.r))].sort((a,b)=>a-b);
+return `<div class="sheet c${P.cols}"><div class="sh"><h2>${esc(P.title)}　${esc(pl)}</h2><span>${ds}</span></div>`+rr.map(R=>{
+const hs=rs.filter(r=>r.pl==pl&&r.r==R).sort((a,b)=>a.no-b.no),h0=hs[0],ck=`${h0.d}|${pl}|${R}`;
+const course=h0.rn.includes('障害')?'障害':(h0.sf=='芝'?'芝':'ダート');
+return `<section class="race"><h3>${esc(pl)} ${R}R <span>${esc(h0.rn)}</span><small>${course}${h0.di}m　${h0.hc||hs.length}頭</small></h3>
+<table><thead><tr>${hasAI?'<th class="n">AI印</th>':''}<th class="n">最終印</th>${cols.map(c=>`<th class="${c[0]=='wk'||c[0]=='no'||c[0]=='wt'?'n':''}">${c[0]=='ai'?'AI勝率':(LBL[c[0]]||(c[0]=='no'?'番':'馬名'))}</th>`).join('')}</tr></thead><tbody>${hs.map(r=>{const k=`${ck}|${r.no}`,m=P.marks[k]||'';
+return `<tr>${hasAI?`<td class="mk am">${AI[k]?AI[k].mark:''}</td>`:''}<td class="mk"><select class="mk" data-k="${esc(k)}" aria-label="${esc(r.nm)}の印">${MK.map(x=>`<option${x==m?' selected':''}>${x}</option>`).join('')}</select><span class="pm">${m}</span></td>${cols.map(c=>c[2](r,k)).join('')}</tr>`}).join('')}</tbody></table>
+<div class="cm" contenteditable="true" data-k="${esc(ck)}">${esc(P.cmt[ck]||'')}</div></section>`}).join('')+`<div class="leg" style="column-span:all">AI印＝AI予測、最終印＝自分で決めた印　◎本命　○対抗　▲単穴　△連下　☆穴　✓注目　消＝消し</div></div>`}).join('')}
+$('#paper').addEventListener('change',e=>{const s=e.target;if(!s.classList.contains('mk'))return;if(s.value)P.marks[s.dataset.k]=s.value;else delete P.marks[s.dataset.k];s.nextElementSibling.textContent=s.value;save()});
+$('#paper').addEventListener('input',e=>{const c=e.target;if(!c.classList.contains('cm'))return;const v=c.innerText.replace(/\n$/,'');if(v.trim())P.cmt[c.dataset.k]=v;else delete P.cmt[c.dataset.k];save()});
+$('#ai').onclick=()=>{loadAI();let c=0,o=0;if(!P.card){toast('先に出馬表CSVを読み込んでください');return}
+for(const r of P.card){const k=`${r.d}|${r.pl}|${r.r}|${r.no}`,a=AI[k];if(a){c++;if(P.marks[k]&&P.marks[k]!=a.mark)o++}}
+if(!c){toast('この出馬表に対応するAI予測の記録がありません（日付・場所・レース番号で照合します）');return}
+if(o&&!confirm(`すでに入力した最終印のうち${o}頭がAIの印で上書きされます。よろしいですか？`))return;
+for(const r of P.card){const k=`${r.d}|${r.pl}|${r.r}|${r.no}`,a=AI[k];if(a)P.marks[k]=a.mark}
+save();render();toast(`AI印を${c}頭の最終印にコピーしました`)};
+$('#clr').onclick=()=>{if(confirm('すべての印を消しますか？（コメントは残ります）')){P.marks={};save();render()}};
+$('#pr').onclick=()=>{if(!P.card){toast('先に出馬表CSVを読み込んでください');return}window.print()};
+function init(){const n=loadAI();$('#aim').textContent=n?`AI予測の記録: ${n}レース`:'AI予測の記録はまだありません（「予測ログ」で記録すると、印と勝率を反映できます）';
+const places=P.card?[...new Set(P.card.map(r=>r.pl))]:[];
+$('#pl').innerHTML='<option value="">すべて</option>'+places.map(p=>`<option>${p}</option>`).join('');$('#pl').value=P.place;
+$('#ttl').value=P.title;$('#pp').value=P.paper;$('#cn').value=P.cols;
+$('#info').textContent=P.card?`読み込み済み: ${P.card[0].d}　${P.card.length}頭（${places.join('・')}）`:'TARGETの出馬表CSVを読み込むと、新聞が作られます。';
+page();render()}
+init();
+</script>
+</body>
+</html>
