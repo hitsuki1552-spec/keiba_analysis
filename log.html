@@ -40,6 +40,14 @@ td:nth-child(1),td:nth-child(3),th:nth-child(1),th:nth-child(3){text-align:left}
 .hit2,.hit3{background:var(--soft)}
 #toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:6px;max-width:90%}
 .roi{color:var(--turf);font-weight:700}
+.calh{display:flex;align-items:center;justify-content:center;gap:16px;max-width:380px;margin:0 auto 6px}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;max-width:380px;margin:0 auto}
+.cw{text-align:center;font-size:12px;color:var(--mut)}.cw.su{color:var(--loss)}
+.cd{aspect-ratio:1.15;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:6px;font:inherit;line-height:1.15}
+button.cd{background:var(--soft);border:1px solid var(--line);color:var(--ink);cursor:pointer}
+button.cd small{font-size:10px;color:var(--turf)}
+button.cd.on{background:var(--turf);border-color:var(--turf);color:#fff}button.cd.on small{color:#fff}
+.cd.off{color:var(--mut);opacity:.45}
 .neg{color:var(--loss)}
 .appbar{background:var(--panel);border-bottom:1px solid var(--line)}
 .appbar .in{max-width:1280px;margin:0 auto;padding:8px 20px;display:flex;align-items:center;gap:6px}
@@ -67,7 +75,11 @@ td:nth-child(1),td:nth-child(3),th:nth-child(1),th:nth-child(3){text-align:left}
 <section id="list" hidden>
 <div class="card"><h2>結果CSVを取り込む（TARGETの result.csv）</h2>
 <div class="row"><label class="s" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:5px 12px">CSVを選ぶ（複数可）<input id="rc" type="file" accept=".csv,text/csv" multiple hidden></label><span class="mut" id="rmsg">着順と確定払戻を、記録済みの予測に自動で反映します。</span></div></div>
-<div class="card row"><label>日付 <select id="dt"></select></label><label>場所 <select id="vn"></select></label><button class="s" id="deld">この日の記録を削除</button></div>
+<div class="card"><div class="calh"><button class="s" id="calp" aria-label="前の月">‹</button><b id="cm"></b><button class="s" id="caln" aria-label="次の月">›</button></div>
+<div class="calg" id="cg"></div><p class="mut" style="margin:6px 0 0">日付を押すと、その日の記録を表示します。● 全レースの結果あり　◐ 一部の結果あり　○ 予測のみ</p>
+<div class="row" style="margin-top:10px"><label>場所 <select id="vn"></select></label><button class="s" id="deld">この日の記録を削除</button><span class="mut" id="sd"></span></div><select id="dt" hidden></select></div>
+<div class="card"><h2>最終オッズを更新（最終オッズ入りの出馬表CSV）</h2>
+<div class="row"><label class="s" style="cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:5px 12px">出馬表CSVを選ぶ（複数可）<input id="oc" type="file" accept=".csv,text/csv" multiple hidden></label><span class="mut" id="omsg">TARGETで最終オッズ入りの出馬表を出力して取り込むと、記録済みの予測のオッズと人気が最終のものに更新されます。</span></div></div>
 <div id="races"></div>
 </section>
 <section id="stat" hidden>
@@ -118,21 +130,46 @@ const d=$('#dt').value,vs=[...new Set(all.filter(r=>r.date==d).map(r=>r.place))]
 $('#vn').innerHTML='<option value="">すべて</option>'+vs.map(v=>`<option>${v}</option>`).join('');if(vs.includes(vv))$('#vn').value=vv;
 const rs=all.filter(r=>r.date==d&&(!$('#vn').value||r.place==$('#vn').value));
 $('#races').innerHTML=rs.length?rs.map(card).join(''):'<div class="card mut">記録がありません。「貼り付けて記録」から追加してください。</div>';
-$('#cnt').textContent=`保存済み: ${all.length}レース（結果入力済み ${all.filter(r=>r.result).length}）`;
+renderCal();$('#cnt').textContent=`保存済み: ${all.length}レース（結果入力済み ${all.filter(r=>r.result).length}）`;
 stats()}
 const posOf=(res,no)=>{for(let i=1;i<=6;i++)if(res[i]===no)return i;return 0};
 function card(r){const k=keyOf(r),res=r.result,py=res&&res.pay;
 const lab=h=>{if(!res)return'–';const p=posOf(res,h.no);return p?p+'着':(res[6]?'7着以下':'4着以下')};
 const yen=v=>v?v.toLocaleString()+'円':'–';
 const inp=i=>`<input type="number" min="1" max="18" data-k="${esc(k)}" data-i="${i}" value="${res&&res[i]?res[i]:''}"${py?' disabled':''} aria-label="${i}着の馬番">`;
-return `<div class="card rc"><div class="hd"><h3>${esc(r.place)} ${r.r}R ${esc(r.name)}</h3><span class="mut">${esc(r.field)}${r.dist}m ${esc(r.cls)}</span></div>
-<div class="tw"><table><thead><tr><th>印</th><th>馬番</th><th>馬名</th><th>勝率</th><th>final</th><th>オッズ</th><th>結果</th><th>単勝払戻</th><th>複勝払戻</th></tr></thead><tbody>${r.horses.map(h=>{const p=res?posOf(res,h.no):0;return `<tr class="${p&&p<=3?'hit'+p:''}"><td>${h.mark}</td><td>${h.no}</td><td>${esc(h.name)}</td><td>${h.win.toFixed(1)}%</td><td>${h.final.toFixed(3)}</td><td>${h.odds==null?'–':h.odds.toFixed(1)}</td><td>${lab(h)}</td><td>${py?yen(py.w[h.no]):'–'}</td><td>${py?yen(py.p[h.no]):'–'}</td></tr>`}).join('')}</tbody></table></div>
+return `<div class="card rc"><div class="hd"><h3>${esc(r.place)} ${r.r}R ${esc(r.name)}</h3><span class="mut">${esc(r.field)}${r.dist}m ${esc(r.cls)}　オッズ: ${r.oddsFinal?'最終':'記録時'}</span></div>
+<div class="tw"><table><thead><tr><th>印</th><th>馬番</th><th>馬名</th><th>勝率</th><th>final</th><th>オッズ</th><th>人気</th><th>結果</th><th>単勝払戻</th><th>複勝払戻</th></tr></thead><tbody>${r.horses.map(h=>{const p=res?posOf(res,h.no):0;return `<tr class="${p&&p<=3?'hit'+p:''}"><td>${h.mark}</td><td>${h.no}</td><td>${esc(h.name)}</td><td>${h.win.toFixed(1)}%</td><td>${h.final.toFixed(3)}</td><td>${h.odds==null?'–':h.odds.toFixed(1)}</td><td>${h.pop?h.pop+'番人気':'–'}</td><td>${lab(h)}</td><td>${py?yen(py.w[h.no]):'–'}</td><td>${py?yen(py.p[h.no]):'–'}</td></tr>`}).join('')}</tbody></table></div>
 <div class="row res" style="margin-top:8px"><span class="mut">結果（馬番）</span>1着 ${inp(1)} 2着 ${inp(2)} 3着 ${inp(3)}${py&&py.u&&Object.keys(py.u).length?`<span class="mut">馬連 ${Object.entries(py.u).map(([k,v])=>k+'：'+v.toLocaleString()+'円').join('、')}</span>`:''}${py?`<span class="mut">CSVから取り込み済み</span><button class="s" data-clr="${esc(k)}">結果を消す</button>`:(res?'':'<span class="mut">手入力は3頭すべて入れると保存されます（払戻は入りません）</span>')}</div></div>`}
 $('#races').addEventListener('click',e=>{const k=e.target.dataset.clr;if(k){DB[k].result=null;save();refresh()}});
 $('#races').addEventListener('change',e=>{const t=e.target;if(!t.dataset.k)return;const r=DB[t.dataset.k],v=[1,2,3].map(i=>document.querySelector(`input[data-k="${CSS.escape(t.dataset.k)}"][data-i="${i}"]`).value);
 if(v.every(x=>x!=='')){const n=v.map(Number);if(new Set(n).size<3){toast('同じ馬番が重複しています');return}r.result={1:n[0],2:n[1],3:n[2]}}else if(v.every(x=>x==='')){r.result=null}else return;
 save();refresh()});
 $('#dt').onchange=$('#vn').onchange=refresh;
+let CAL=null;
+function renderCal(){const d=$('#dt').value;if(!CAL){const n=d?new Date(d+'T00:00:00'):new Date();CAL={y:n.getFullYear(),m:n.getMonth()}}
+const info={};for(const r of Object.values(DB)){const e=info[r.date]??={n:0,res:0};e.n++;if(r.result)e.res++}
+$('#cm').textContent=`${CAL.y}年${CAL.m+1}月`;
+const first=new Date(CAL.y,CAL.m,1).getDay(),len=new Date(CAL.y,CAL.m+1,0).getDate();
+let h='日月火水木金土'.split('').map((c,i)=>`<div class="cw${i==0?' su':''}">${c}</div>`).join('')+'<div></div>'.repeat(first);
+for(let day=1;day<=len;day++){const iso=`${CAL.y}-${String(CAL.m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`,e=info[iso];
+h+=e?`<button class="cd${iso==d?' on':''}" data-d="${iso}" aria-label="${CAL.m+1}月${day}日">${day}<small>${e.res==e.n?'●':e.res?'◐':'○'}</small></button>`:`<div class="cd off">${day}</div>`}
+$('#cg').innerHTML=h;
+const n=d?Object.values(DB).filter(r=>r.date==d).length:0;$('#sd').textContent=d?`${d}（${'日月火水木金土'[new Date(d+'T00:00:00').getDay()]}）　${n}レース`:'記録がありません'}
+$('#cg').onclick=e=>{const b=e.target.closest('button[data-d]');if(!b)return;$('#dt').value=b.dataset.d;refresh()};
+$('#calp').onclick=()=>{if(!CAL)renderCal();CAL.m--;if(CAL.m<0){CAL.m=11;CAL.y--}renderCal()};
+$('#caln').onclick=()=>{if(!CAL)renderCal();CAL.m++;if(CAL.m>11){CAL.m=0;CAL.y++}renderCal()};
+$('#oc').onchange=async e=>{const rc=new Set;let hs=0,miss=0;
+for(const f of e.target.files){const buf=await f.arrayBuffer();let t=new TextDecoder('shift_jis').decode(buf);if(!t.includes('馬名'))t=new TextDecoder('utf-8').decode(buf);
+const rows=csv(t),H=rows[0].map(s=>s.trim()),ix=n=>H.indexOf(n);
+if(ix('本日オッズ')<0||ix('競走番号')<0){toast('出馬表CSVではないようです（本日オッズ・競走番号の列がありません）');continue}
+const seen=new Set;
+for(const r of rows.slice(1)){const g=n=>(r[ix(n)]??'').trim(),d=g('年月日');if(d.length!=6)continue;
+const k=`20${d.slice(0,2)}-${d.slice(2,4)}-${d.slice(4,6)}|${g('場所')}|${+g('競走番号')}`,p=DB[k];
+if(!p){if(!seen.has(k)){seen.add(k);miss++}continue}
+const od=parseFloat(g('本日オッズ')),pop=+g('本日人気'),h=p.horses.find(x=>x.no==+g('馬番号'));
+if(h&&od>0){h.odds=od;if(pop)h.pop=pop;p.oddsFinal=true;rc.add(k);hs++}}}
+save();e.target.value='';refresh();
+$('#omsg').textContent=hs?`${rc.size}レース・${hs}頭のオッズと人気を最終のものに更新しました。`+(miss?` 予測の記録がない: ${miss}レース。`:''):'更新できるオッズがありませんでした（日付・場所・レース番号で照合します。オッズが未発表のCSVは更新されません）。'};
 $('#deld').onclick=()=>{const d=$('#dt').value;if(!d||!confirm(d+' の記録をすべて削除しますか？'))return;for(const k in DB)if(DB[k].date==d)delete DB[k];save();refresh()};
 function st(l){let n=l.length,w=0,p2=0,p3=0,wr=0,pr=0,pn=0,on=0,os=0;
 for(const[r,h]of l){const f=posOf(r.result,h.no),py=r.result.pay;if(f==1)w++;if(f&&f<=2)p2++;
